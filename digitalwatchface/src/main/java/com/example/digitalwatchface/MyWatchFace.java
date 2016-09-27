@@ -21,6 +21,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -31,12 +32,16 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
+import android.text.format.Time;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 import android.widget.Toast;
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Type;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -47,6 +52,9 @@ import java.util.concurrent.TimeUnit;
 public class MyWatchFace extends CanvasWatchFaceService {
     private static final Typeface NORMAL_TYPEFACE =
             Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL);
+
+    private static final Typeface BOLD_TYPEFACE =
+            Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD);
 
     /**
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
@@ -89,6 +97,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
         Paint mTextPaint;
+        Paint mTemperaturePaintHigh, mTemperaturePaintLow;
+        Paint mDateTextPaint;
         boolean mAmbient;
         Calendar mCalendar;
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
@@ -98,8 +108,13 @@ public class MyWatchFace extends CanvasWatchFaceService {
                 invalidate();
             }
         };
-        float mXOffset;
-        float mYOffset;
+        float mXTimeOffset, mXDateOffset, mXHighTempOffset, mXLowTempOffset;
+        float mYTimeOffset, mYDateOffset, mYWeatherOffset;
+
+        Double mHigh, mLow;
+        private Bitmap mIcon;
+
+        Time mTime;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -118,7 +133,6 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     .setAcceptsTapEvents(true)
                     .build());
             Resources resources = MyWatchFace.this.getResources();
-            mYOffset = resources.getDimension(R.dimen.digital_y_offset);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
@@ -126,7 +140,22 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mTextPaint = new Paint();
             mTextPaint = createTextPaint(resources.getColor(R.color.digital_text));
 
+            mDateTextPaint = new Paint();
+            mDateTextPaint = createTextPaint(resources.getColor(R.color.date_text_color));
+            mDateTextPaint.setTextSize(25f);
+
+            mTemperaturePaintHigh = new Paint();
+            mTemperaturePaintHigh = createBoldTextPaint(resources.getColor(R.color.digital_text));
+            mTemperaturePaintHigh.setTextSize(30f);
+
+            mTemperaturePaintLow = new Paint();
+            mTemperaturePaintLow = createTextPaint(resources.getColor(R.color.digital_text));
+            mTemperaturePaintLow.setTextSize(30f);
+
+
             mCalendar = Calendar.getInstance();
+
+            mTime = new Time();
         }
 
         @Override
@@ -143,6 +172,12 @@ public class MyWatchFace extends CanvasWatchFaceService {
             return paint;
         }
 
+        private Paint createBoldTextPaint(int textColor){
+            Paint paint = createTextPaint(textColor);
+            paint.setTypeface(BOLD_TYPEFACE);
+            return paint;
+        }
+
         @Override
         public void onVisibilityChanged(boolean visible) {
             super.onVisibilityChanged(visible);
@@ -152,6 +187,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
                 // Update time zone in case it changed while we weren't visible.
                 mCalendar.setTimeZone(TimeZone.getDefault());
+                mTime.setToNow();
+
                 invalidate();
             } else {
                 unregisterReceiver();
@@ -186,12 +223,20 @@ public class MyWatchFace extends CanvasWatchFaceService {
             // Load resources that have alternate values for round watches.
             Resources resources = MyWatchFace.this.getResources();
             boolean isRound = insets.isRound();
-            mXOffset = resources.getDimension(isRound
-                    ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
-            float textSize = resources.getDimension(isRound
-                    ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
+            mXTimeOffset = resources.getDimension(isRound
+                    ? R.dimen.x_offset_time : R.dimen.x_offset_time);
+            float timeTextSize = resources.getDimension(isRound
+                    ? R.dimen.digital_text_size : R.dimen.digital_text_size);
 
-            mTextPaint.setTextSize(textSize);
+            mYTimeOffset = resources.getDimension(R.dimen.y_offset_time);
+
+            mXDateOffset = resources.getDimension(R.dimen.x_offset_date);
+            mYDateOffset = resources.getDimension(R.dimen.y_offset_date);
+
+            mXHighTempOffset = resources.getDimension(R.dimen.x_offset_weather_high);
+            mYWeatherOffset = resources.getDimension(R.dimen.y_offset_weather);
+
+            mTextPaint.setTextSize(timeTextSize);
         }
 
         @Override
@@ -258,12 +303,36 @@ public class MyWatchFace extends CanvasWatchFaceService {
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
 
-            String text = mAmbient
-                    ? String.format("%d:%02d", mCalendar.get(Calendar.HOUR),
-                    mCalendar.get(Calendar.MINUTE))
-                    : String.format("%d:%02d:%02d", mCalendar.get(Calendar.HOUR),
-                    mCalendar.get(Calendar.MINUTE), mCalendar.get(Calendar.SECOND));
-            canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
+            String timeString = String.format("%d:%02d", mCalendar.get(Calendar.HOUR),
+                    mCalendar.get(Calendar.MINUTE));
+
+
+            String date = formatDate(mTime.toMillis(false));
+
+            if (mHigh == null) {
+                mHigh = 25.0d;
+            }
+            if (mLow == null) {
+                mLow=10.0d;
+            }
+
+            float x = mXHighTempOffset;
+
+            String highString = String.format(getString(R.string.format_temperature),mHigh) + " ";
+            String lowString = String.format(getString(R.string.format_temperature),mLow);
+
+            canvas.drawText(highString, mXHighTempOffset, mYWeatherOffset, mTemperaturePaintHigh);
+            canvas.drawText(lowString, mXHighTempOffset + mTemperaturePaintHigh.measureText(highString), mYWeatherOffset, mTemperaturePaintLow);
+
+            canvas.drawText(timeString, mXTimeOffset, mYTimeOffset, mTextPaint);
+            canvas.drawText(date, mXDateOffset, mYDateOffset, mDateTextPaint);
+
+            if (mIcon!=null && !isInAmbientMode()) {
+                canvas.drawBitmap(mIcon, mXOffset + resources.getDimension(R.dimen.extra_x_offset_icon),
+                        mYOffset + resources.getDimension(R.dimen.extra_y_offset_icon), mIconPaint);
+            }
+
+
         }
 
         /**
@@ -275,6 +344,13 @@ public class MyWatchFace extends CanvasWatchFaceService {
             if (shouldTimerBeRunning()) {
                 mUpdateTimeHandler.sendEmptyMessage(MSG_UPDATE_TIME);
             }
+        }
+
+        private String formatDate(long millis) {
+            SimpleDateFormat formatter = new SimpleDateFormat("EEE, LLL dd yyyy");
+            Date date = new Date(millis);
+            return formatter.format(date).toUpperCase();
+
         }
 
         /**

@@ -3,6 +3,18 @@
     <dimen name="digital_text_size">40dp</dimen>
     <dimen name="digital_text_size_round">45dp</dimen>
     <dimen name="digital_x_offset">15dp</dimen>
-    <dimen name="digital_x_offset_round">25dp</dimen>
-    <dimen name="digital_y_offset">90dp</dimen>
+
+    <!--TIME-->
+    <dimen name="x_offset_time">65dp</dimen>
+    <dimen name="y_offset_time">75dp</dimen>
+
+    <!--DATE-->
+    <dimen name="x_offset_date">40dp</dimen>
+    <dimen name="y_offset_date">100dp</dimen>
+
+    <!--Weather-->
+    <dimen name="x_offset_weather_high">100dp</dimen>
+    <dimen name="y_offset_weather">170dp</dimen>
+
+
 </resources>
