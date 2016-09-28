@@ -1,4 +1,4 @@
-/*
+package wear;/*
  * Copyright (C) 2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package com.example.android.sunshine.app;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -42,6 +40,7 @@ import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 import android.widget.Toast;
 
+import com.example.android.sunshine.app.R;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
@@ -55,7 +54,6 @@ import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -137,11 +135,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
         Time mTime;
 
         private static final String WEATHER_PATH = "/weather";
-        private static final String WEATHER_INFO_PATH = "/weather-info";
-
-        private static final String KEY_UUID = "uuid";
-        private static final String KEY_HIGH = "high";
-        private static final String KEY_LOW = "low";
+        private static final String HIGH_TEMPERATURE = "high_temperature";
+        private static final String LOW_TEMPERATURE = "low_temperature";
         private static final String KEY_WEATHER_ID = "weatherId";
 
         GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(MyWatchFace.this)
@@ -463,19 +458,19 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     DataMap dataMap = DataMapItem.fromDataItem(dataEvent.getDataItem()).getDataMap();
                     String path = dataEvent.getDataItem().getUri().getPath();
                     Log.d("RCD", path);
-                    if (path.equals(WEATHER_INFO_PATH)) {
-                        if (dataMap.containsKey(KEY_HIGH)) {
-                            mHigh = dataMap.getString(KEY_HIGH);
+                    if (path.equals(WEATHER_PATH)) {
+                        if (dataMap.containsKey(HIGH_TEMPERATURE)) {
+                            mHigh = dataMap.getString(HIGH_TEMPERATURE);
                             Log.d("RCD", "High = " + mHigh);
                         } else {
                             Log.d("RCD", "No high");
                         }
 
-                        if (dataMap.containsKey(KEY_LOW)) {
-                            mLow = dataMap.getString(KEY_LOW);
+                        if (dataMap.containsKey(LOW_TEMPERATURE)) {
+                            mLow = dataMap.getString(LOW_TEMPERATURE);
                             Log.d("RCD", "Low = " + mLow);
                         } else {
-                            Log.d("RCD", "What? No low?");
+                            Log.d("RCD", "No low");
                         }
 
                         if (dataMap.containsKey(KEY_WEATHER_ID)) {

@@ -1,4 +1,6 @@
-package com.example.android.sunshine.app;
+package wear;
+
+import com.example.android.sunshine.app.R;
 
 /**
  * Created by ryand on 9/27/2016.
