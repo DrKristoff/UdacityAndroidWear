@@ -1,4 +1,4 @@
-package com.example.digitalwatchface;
+package com.example.android.sunshine.app;
 
 /**
  * Created by ryand on 9/27/2016.
