@@ -137,7 +137,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
         private static final String WEATHER_PATH = "/weather";
         private static final String HIGH_TEMPERATURE = "high_temperature";
         private static final String LOW_TEMPERATURE = "low_temperature";
-        private static final String KEY_WEATHER_ID = "weatherId";
+        private static final String WEATHER_CONDITION = "weather_condition";
 
         GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(MyWatchFace.this)
                 .addConnectionCallbacks(this)
@@ -360,11 +360,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
             float x = mXHighTempOffset;
 
-            String highString = mHigh + "\u00B0 ";
-            String lowString = mLow + "\u00B0";
-
-            canvas.drawText(highString, mXHighTempOffset, mYWeatherOffset, mTemperaturePaintHigh);
-            canvas.drawText(lowString, mXHighTempOffset + mTemperaturePaintHigh.measureText(highString), mYWeatherOffset, mTemperaturePaintLow);
+            canvas.drawText(mHigh, mXHighTempOffset, mYWeatherOffset, mTemperaturePaintHigh);
+            canvas.drawText(mLow, mXHighTempOffset + mTemperaturePaintHigh.measureText(mHigh), mYWeatherOffset, mTemperaturePaintLow);
 
             canvas.drawText(timeString, mXTimeOffset, mYTimeOffset, mTextPaint);
             canvas.drawText(date, mXDateOffset, mYDateOffset, mDateTextPaint);
@@ -473,8 +470,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
                             Log.d("RCD", "No low");
                         }
 
-                        if (dataMap.containsKey(KEY_WEATHER_ID)) {
-                            int weatherId = dataMap.getInt(KEY_WEATHER_ID);
+                        if (dataMap.containsKey(WEATHER_CONDITION)) {
+                            int weatherId = dataMap.getInt(WEATHER_CONDITION);
                             Drawable b = getResources().getDrawable(Utils.getIconResourceForWeatherCondition(weatherId));
                             Bitmap icon = ((BitmapDrawable) b).getBitmap();
                             float scaledWidth = (mTemperaturePaintHigh.getTextSize() / icon.getHeight()) * icon.getWidth();
