@@ -488,6 +488,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
                         if (dataMap.containsKey(WEATHER_ICON)) {
                             Asset weatherIconAsset = dataMap.getAsset(WEATHER_ICON);
                             mIcon = loadBitmapFromAsset(weatherIconAsset);
+                            mIcon = Bitmap.createScaledBitmap(mIcon, 60, 60, false);
 
                         } else {
                             Log.d("RCD", "No icon");
