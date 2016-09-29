@@ -419,7 +419,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
         weatherDataMap.putString(HIGH_TEMPERATURE, Utility.formatTemperature(context, cursor.getDouble(INDEX_MAX_TEMP)));
         weatherDataMap.putString(LOW_TEMPERATURE, Utility.formatTemperature(context, cursor.getDouble(INDEX_MIN_TEMP)));
         weatherDataMap.putInt(WEATHER_CONDITION, cursor.getInt(INDEX_WEATHER_ID));
-        weatherDataMap.putAsset("profileImage", iconAsset);
+        weatherDataMap.putAsset(WEATHER_ICON, iconAsset);
         PutDataRequest weatherRequest = weatherMapRequest.asPutDataRequest();
         Wearable.DataApi.putDataItem(googleApiClient, weatherRequest);
 
