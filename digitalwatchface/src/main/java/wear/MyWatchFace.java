@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -44,6 +45,7 @@ import com.example.android.sunshine.app.R;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
@@ -53,6 +55,7 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -137,7 +140,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
         private static final String WEATHER_PATH = "/weather";
         private static final String HIGH_TEMPERATURE = "high_temperature";
         private static final String LOW_TEMPERATURE = "low_temperature";
-        private static final String KEY_WEATHER_ID = "weatherId";
+        private static final String WEATHER_CONDITION = "weather_condition";
+        private static final String WEATHER_ICON = "weather_icon";
 
         GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(MyWatchFace.this)
                 .addConnectionCallbacks(this)
@@ -360,11 +364,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
             float x = mXHighTempOffset;
 
-            String highString = mHigh + "\u00B0 ";
-            String lowString = mLow + "\u00B0";
-
-            canvas.drawText(highString, mXHighTempOffset, mYWeatherOffset, mTemperaturePaintHigh);
-            canvas.drawText(lowString, mXHighTempOffset + mTemperaturePaintHigh.measureText(highString), mYWeatherOffset, mTemperaturePaintLow);
+            canvas.drawText(mHigh, mXHighTempOffset, mYWeatherOffset, mTemperaturePaintHigh);
+            canvas.drawText(mLow, mXHighTempOffset + mTemperaturePaintHigh.measureText(mHigh), mYWeatherOffset, mTemperaturePaintLow);
 
             canvas.drawText(timeString, mXTimeOffset, mYTimeOffset, mTextPaint);
             canvas.drawText(date, mXDateOffset, mYDateOffset, mDateTextPaint);
@@ -473,21 +474,51 @@ public class MyWatchFace extends CanvasWatchFaceService {
                             Log.d("RCD", "No low");
                         }
 
-                        if (dataMap.containsKey(KEY_WEATHER_ID)) {
-                            int weatherId = dataMap.getInt(KEY_WEATHER_ID);
+                        /*if (dataMap.containsKey(WEATHER_CONDITION)) {
+                            *//*int weatherId = dataMap.getInt(WEATHER_CONDITION);
                             Drawable b = getResources().getDrawable(Utils.getIconResourceForWeatherCondition(weatherId));
                             Bitmap icon = ((BitmapDrawable) b).getBitmap();
                             float scaledWidth = (mTemperaturePaintHigh.getTextSize() / icon.getHeight()) * icon.getWidth();
-                            mIcon = Bitmap.createScaledBitmap(icon, (int) scaledWidth, (int) mTemperaturePaintHigh.getTextSize(), true);
+                            mIcon = Bitmap.createScaledBitmap(icon, (int) scaledWidth, (int) mTemperaturePaintHigh.getTextSize(), true);*//*
 
                         } else {
                             Log.d("RCD", "No weather ID");
+                        }*/
+
+                        if (dataMap.containsKey(WEATHER_ICON)) {
+                            Asset weatherIconAsset = dataMap.getAsset(WEATHER_ICON);
+                            mIcon = loadBitmapFromAsset(weatherIconAsset);
+
+                        } else {
+                            Log.d("RCD", "No icon");
                         }
 
                         invalidate();
                     }
                 }
             }
+        }
+
+        public Bitmap loadBitmapFromAsset(Asset asset) {
+            if (asset == null) {
+                throw new IllegalArgumentException("Asset must be non-null");
+            }
+            ConnectionResult result =
+                    mGoogleApiClient.blockingConnect(1000, TimeUnit.MILLISECONDS);
+            if (!result.isSuccess()) {
+                return null;
+            }
+            // convert asset into a file descriptor and block until it's ready
+            InputStream assetInputStream = Wearable.DataApi.getFdForAsset(
+                    mGoogleApiClient, asset).await().getInputStream();
+            mGoogleApiClient.disconnect();
+
+            if (assetInputStream == null) {
+                Log.w("RCD", "Requested an unknown Asset.");
+                return null;
+            }
+            // decode the stream into a bitmap
+            return BitmapFactory.decodeStream(assetInputStream);
         }
     }
 }

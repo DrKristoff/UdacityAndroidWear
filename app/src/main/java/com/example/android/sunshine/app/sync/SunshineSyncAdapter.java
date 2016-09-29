@@ -38,6 +38,9 @@ import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.muzei.WeatherMuzeiSource;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.wearable.Asset;
+import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
@@ -48,6 +51,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -74,6 +78,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
     private static final String HIGH_TEMPERATURE = "high_temperature";
     private static final String LOW_TEMPERATURE = "low_temperature";
     private static final String WEATHER_CONDITION = "weather_condition";
+    private static final String WEATHER_ICON = "weather_icon";
 
 
     private static final String[] NOTIFY_WEATHER_PROJECTION = new String[] {
@@ -406,13 +411,24 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
             return;
         }
 
+        int artResourceId = Utility.getArtResourceForWeatherCondition(cursor.getInt(INDEX_WEATHER_ID));
+        Asset iconAsset = createAssetFromBitmap(BitmapFactory.decodeResource(context.getResources(), artResourceId));
+
         PutDataMapRequest weatherMapRequest = PutDataMapRequest.create(WEATHER_PATH);
         DataMap weatherDataMap = weatherMapRequest.getDataMap();
         weatherDataMap.putString(HIGH_TEMPERATURE, Utility.formatTemperature(context, cursor.getDouble(INDEX_MAX_TEMP)));
         weatherDataMap.putString(LOW_TEMPERATURE, Utility.formatTemperature(context, cursor.getDouble(INDEX_MIN_TEMP)));
         weatherDataMap.putInt(WEATHER_CONDITION, cursor.getInt(INDEX_WEATHER_ID));
+        weatherDataMap.putAsset("profileImage", iconAsset);
         PutDataRequest weatherRequest = weatherMapRequest.asPutDataRequest();
         Wearable.DataApi.putDataItem(googleApiClient, weatherRequest);
+
+    }
+
+    private static Asset createAssetFromBitmap(Bitmap bitmap) {
+        final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
+        return Asset.createFromBytes(byteStream.toByteArray());
     }
 
     private void updateMuzei() {
